@@ -1,0 +1,161 @@
+var express = require("express"); // imports express
+var app = express();        // create a new instance of express
+app.use("/static", express.static(path.join(__dirname, 'static')));// imports the fs module (reading and writing to a text file)
+var fs = require("fs");
+var playergoing, playerwaiting,tosend;
+var gameState = [];
+gameState[1] = ({x: 0, y:0})
+gameState[2] = ({x: 0, y:0})
+
+var chat = new Array();
+var chatline = new Object();
+// the bodyParser middleware allows us to parse the
+// body of a request
+
+// The global datastore for this example
+var datastore;
+var currentPlayer = "";
+
+
+// Asynchronously read file contents, then call callbackFn
+function readFile(filename, defaultData, callbackFn) {
+  fs.readFile(filename, function(err, data) {
+    if (err) {
+      console.log("Error reading file: ", filename);
+      data = defaultData;
+    } else {
+      console.log("Success reading file: ", filename);
+    }
+    if (callbackFn) callbackFn(err, data);
+  });
+}
+
+// Asynchronously write file contents, then call callbackFn
+function writeFile(filename, data, callbackFn) {
+  fs.writeFile(filename, data, function(err) {
+    if (err) {
+      console.log("Error writing file: ", filename);
+    } else {
+      console.log("Success writing file: ", filename);
+    }
+    if (callbackFn) callbackFn(err);
+  });
+}
+
+function calcGameState(gs, pm) {
+  gs[pm.playerID].x = pm.x;
+  gs[pm.playerID].y = pm.y;
+ return gs;
+}
+
+app.get(('/ping', function(request, response){
+  response.send({ success: true });
+}))
+
+app.get(('/physics', function(request, response){
+  response.send({physics:calcGameState,
+success:true})
+}))
+
+// create new answer
+app.post("/addchat", function(request, response) {
+
+var chatline = ({
+playerID: request.body.playerID,
+message: request.body.message,
+"date": new Date()})
+chat.push(chatline)
+console.log(chat);
+  temp = ({
+    success: true })
+ // writeFile("chat.txt", JSON.stringify(chat));
+  response.send(temp)
+
+})
+
+app.get("/getchat", function(request, response) {
+  temp = ({
+    chat: chat,
+    success: true })
+  response.send(temp)
+})
+
+
+// create new answer
+app.post("/sendmove", function(request, response) {
+if(request.body.playerID !== playergoing){
+response.send({success: false})
+} else{
+gameState =  calcGameState(gameState,request.body)
+  datastore[request.body.playerID] = { 
+    "gamestate": gameState,
+    "date": new Date()
+  };
+  writeFile("data.txt", JSON.stringify(datastore));
+  var temp = playergoing;
+  playergoing = playerwaiting;
+  playerwaiting = temp;
+  temp = ({ 
+gameState: datastore,
+    success: true })
+  response.send(temp)
+tosend.send(temp);
+}})
+
+// This is for serving files in the static directory
+app.get("/getID", function (request, response) {
+  if(!playergoing){
+    console.log(request);
+playergoing = 1;
+tosend = response;
+console.log(tosend);
+  }
+  else
+if(!playerwaiting){
+playerwaiting = 2;
+response.send({ 
+playerID: playerwaiting,
+    success: true })
+    console.log(request);
+
+console.log(tosend);
+
+tosend.send({
+  playerID: playergoing,
+  success: true
+})
+}
+   else response.send ({success:false});
+})
+
+
+
+// This is for serving files in the static directory
+app.get("/getcurrentstate", function (request, response) {
+  if(request.body.playerID === playergoing){
+response.send({ 
+gameState: datastore,
+    success: true })
+} else{
+if(request.body.playerID === playerwaiting){
+  tosend = response;
+  } else{
+response.send({success: false})
+  }
+}});
+
+// This is for serving files in the static directory
+app.get("/static/:staticFilename", function (request, response) {
+    response.sendfile("static/" + request.params.staticFilename);
+});
+
+function initServer() {
+  // When we start the server, we must load the stored data
+  var defaultList = "[]";
+  readFile("chat.txt", defaultList, function(err, data) {
+    chat = JSON.parse(data);
+  });
+}
+
+//initServer();
+app.listen(8889);

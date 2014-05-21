@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html>
+<!--=========================
+        diver's HTML
+==========================-->
+<head>
+    <title> Oride </title>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" href="/mobile/icon.png" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+    <link href="/css/reset.css" rel="stylesheet" type="text/css">
+    <link href="/css/style.css" rel="stylesheet" type="text/css">
+
+    <script src="/libs/jq/jquery-1.8.2.min.js"></script>
+    <script src="/libs/jq/addTappableJQPlugin.js"></script>
+    <script src="UI.js"></script>
+    <script src="app.js"></script>
+
+    <script type="text/javascript"
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAzs3-Vf6NroQ3y0fxvf_UY5piCWiVCWhw&sensor=true">
+    </script>
+
+    <script type="text/javascript">
+
+        //////////////////////////
+        ///////variables
+        //////////////////////////
+
+        //information sent to the server
+        //contains 1checked, 2 checked, val date, val driver
+        var informationList = {};
+        //markers dictionary
+        //1: current position
+        //2: start marker
+        //3: end marker
+        //4: all markers of drivers available
+        var markersDict = {};
+        var zoomValue = 14;
+
+
+        /////////////////////////
+        ///google map values
+        /////////////////////////
+        function initialize() {
+            navigator.geolocation.getCurrentPosition(function(position){
+                var lat = position.coords.latitude;
+                var lon = position.coords.longitude;
+
+
+                //////default map option///////////
+                var mapOptions = {
+                    center: new google.maps.LatLng(lat,lon),
+                    zoom: zoomValue,
+                    mapTypeId: google.maps.MapTypeId.ROADMAP,
+                    disableDefaultUI: true,
+                    styles:[{
+                        featureType:"poi",
+                        elementType:"labels",
+                        stylers:[{
+                            visibility:"off"
+                        }]
+                    }]
+                };
+
+                ///////creates new map//////////
+                map = new google.maps.Map(document.getElementById("map-canvas"),
+                        mapOptions);
+
+                var infoWindow = new google.maps.InfoWindow({
+                    content: 'Test',
+                    suppressInfoWindows: true,
+                });
+
+                //////////////makes home marker///////////////
+                var marker = new google.maps.Marker({
+                    position: map.getCenter(),
+                    map: map,
+                    title: 'Get Picked Up Here'
+                });
+
+                ////////bouncing animation/////////
+                function toggleBounce() {
+                    if (marker.getAnimation() != null) {
+                        marker.setAnimation(null);
+                    } else {
+                        marker.setAnimation(google.maps.Animation.BOUNCE);
+                    }
+                }
+
+                /////////click on marker////////////
+                google.maps.event.addListener(marker, 'click', function() {
+                    map.setCenter(marker.getPosition());
+                    toggleBounce();
+                    infoWindow.close();
+                });
+
+            });
+        }
+
+
+        ///////initialize google map//////////
+        google.maps.event.addDomListener(window, 'load', initialize);
+
+
+        ///////////////////////////
+        ///geocoder
+        ///////////////////////////
+
+        /////////Geocoder//////////
+        var geocoder = new google.maps.Geocoder();
+        ///////address shifts map////////
+        function codeAddress(location) {
+            if (location === "start"){
+                //+Pittsburgh ensures search is in pittsburgh
+                var address = $("#start").val() + " Pittsburgh";
+            } else if (location === "end"){
+                var address = $("#end").val() + " Pittsburgh";
+            } else {
+                alert("error");
+            }
+
+            geocoder.geocode({'address': address}, function(results, status) {
+                if((status === google.maps.GeocoderStatus.OK) &&
+                    //if searching outside of pittsburgh
+                        (results[0]["formatted_address"].indexOf("Pittsburgh")===-1)){
+                    alert('this app is only limited to use in Pittsburgh')
+                }else if (status === google.maps.GeocoderStatus.OK) {
+                    //if searching within pittsburgh
+                    console.log(results);
+                    map.setCenter(results[0].geometry.location);
+                    ///makes new marker according to start or end
+                    /// then puts marker into marker dictionary
+                    if (location === 'start'){
+                        var iconBase = 'https://maps.google.com/mapfiles/kml/shapes/';
+                        var marker = new google.maps.Marker({
+                            position: results[0].geometry.location,
+                            map: map,
+                            title: 'Get Picked Up Here',
+                            icon: iconBase + 'schools_maps.png',       //icon image
+                            shadow: iconBase + 'schools_maps.shadow.png', // shadow image
+                        });
+                        if (markersDict["start"] !== undefined){
+                            console.log(markersDict['start']);
+                            markersDict["start"].setMap(null);
+                            delete markersDict['start'];
+                        }
+                        markersDict["start"] = marker;
+                        console.log(markersDict["start"]);
+                    } else if (location === "end"){
+                        var marker = new google.maps.Marker({
+                            map: map,
+                            position: results[0].geometry.location
+                        });
+                        if (markersDict["end"] !== undefined){
+                            markersDict["end"].setMap(null);
+                            delete markersDict["end"];
+                        }
+                        markersDict["end"] = marker;
+                    }
+                }else {
+                    //if status not ok
+                    alert('Geocode was not successful for the following reason: ' + status);
+                }
+            });
+        }
+
+        ///////connects between the two markers
+
+
+        ///////map-shift outputs address///////
+        function codeLatLng() {
+            var input = document.getElementById('start').val();
+            var latlngStr = input.split(',', 2);
+            var lat = parseFloat(latlngStr[0]);
+            var lng = parseFloat(latlngStr[1]);
+            var latlng = new google.maps.LatLng(lat, lng);
+            geocoder.geocode({'latLng': latlng}, function(results, status) {
+                if (status == google.maps.GeocoderStatus.OK) {
+                    if (results[1]) {
+                        map.setZoom(zoomValue);
+                        marker = new google.maps.Marker({
+                            position: latlng,
+                            map: map
+                        });
+                        infowindow.setContent(results[1].formatted_address);
+                        infowindow.open(map, marker);
+                    } else {
+                        alert('No results found');
+                    }
+                } else {
+                    alert('Geocoder failed due to: ' + status);
+                }
+            });
+        }
+
+
+    </script>
+</head>
+
+<body>
+
+    <!--===============================================
+            page structure: main page - set location
+    =================================================-->
+
+    <div class="page">
+
+        <div class="header">
+            <div id="menuButton" class="button"></div>
+            <div id="reservHeaderButton" class="button"></div>
+
+
+            <div class="processBalls_bottom">
+                <div id="layerBall11" >
+                    <div class="ball11"></div>
+                    <div class="line11"></div>
+                </div>
+                <div id="layerBall22">
+                    <div class="ball22"></div>
+                    <div class="line22"></div>
+                </div>
+                <div id="layerBall33">
+                    <div class="ball33"></div>
+                    <div class="line33"></div>
+                </div>
+                <div id="layerBall44">
+                    <div class="ball44"></div>
+                </div>
+            </div>
+            <div class="processBalls">
+                <div id="layerBall1" >
+                    <div class="ball1"></div>
+                    <div class="line1 hideBall"></div>
+                    <div id="layerPulse1" class="pulse1"></div>
+                </div>
+
+                <div id="layerBall2">
+                    <div class="ball2 hideBall"></div>
+                    <div class="line2 hideBall"></div>
+                    <div class="pulse2 hideBall"></div>
+                </div>
+
+                <div id="layerBall3">
+                    <div class="ball3 hideBall"></div>
+                    <div class="line3 hideBall"></div>
+                    <div class="pulse3 hideBall"></div>
+                </div>
+
+                <div id="layerBall4">
+                    <div class="ball4 hideBall"></div>
+                    <div class="pulse4 hideBall"></div>
+                </div>
+            </div>
+
+
+
+            <div class="titleMain">Oride</div>
+
+        </div>
+
+
+        <div class="content" >
+
+            <!--=============================
+                1st step: new task
+            ==============================-->
+            <div id="standBy_area">
+
+                <div class="schedule">
+                    <div class="subtitle_d">Hours today</div>
+                    <div class="hours">9am - 12pm</div>
+                    <div class="hours">3pm - 9pm</div>
+                </div>
+
+                <div class="availability">
+                    <div class="subtitle_d">Availability</div>
+                    <div class="avi_toggle hours">
+                        <div class="toggle-button">
+                            <ul>
+                                <li><label for="checkbox-0"><input type="checkbox" name="checkbox-0" id="checkbox-0" /><span>checkbox 0</span></label></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="futureTask">
+                    <div class="subtitle_d">my Future tasK</div>
+                    <ul>
+                        <li>
+                            <span class="purple">1</span>
+                            <div class="futureTaskTime">Apr 29 at 11:20am</div>
+                            <div class="futureTaskLo">5000 Forbes Ave</div>
+                            <div class="futureTaskPName">Jackathon</div>
+                            <div class="alarm_icon"></div>
+                        </li>
+                        <li>
+                            <span class="purple">2</span>
+                            <div class="futureTaskTime">Apr 29 at 8:10pm</div>
+                            <div class="futureTaskLo">5030 Centre Ave</div>
+                            <div class="futureTaskPName">Mary</div>
+                            <div class="alarm_icon"></div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+
+            <div class="aviCar initiallyHidden"></div>
+            <div id="dropPinS" class="initiallyHidden"></div>
+            <div id="dropPinE" class="initiallyHidden"></div>
+
+            <div id="newTaskComing" class="circleComfirm">new task</div>
+            <div id="accept" class="circleComfirm">Accept<div class="next"></div></div>
+            <div id="decline" class="circle50">Decline</div>
+
+
+            <!--=============================
+               2rd step: go to pickup
+            ==============================-->
+            <div id="waitingSlide" class="initiallyHidden">
+                <div class="howLong">Approach to Rider in <strong id="timeToPickup">14</strong> mins</div>
+                <div class="callDriver">
+                    <div class="profile passenger"></div>
+                    <div class="call"></div>
+                    <div class="driverName_s">Peter.H</div>
+                </div>
+            </div>
+            <div id="bumpMeet" class="circleComfirm">Start Ride</div>
+
+            <!--=============================
+            3rd step: on the ride
+            ==============================-->
+            <div id="onRideSlide" class="initiallyHidden">
+                <div class="howLong"><p>Arrive in <strong id="timeToEnd">19</strong> mins</p></div>
+                <div class="callDriver">
+                    <div class="profile passenger"></div>
+                    <div class="driverName_s">Peter.H</div>
+                </div>
+            </div>
+            <div id="bumpArrive" class="circleComfirm">Finish!</div>
+
+            <!--=============================
+            4th step: finish
+            ==============================-->
+            <div id="receipt">
+                <div class="wrap">
+                    <div class="receiptTitle">Fare</div>
+                    <div id="bigFare">$16</div>
+                    <div class="fare">
+                        <ul>
+                            <li>Fare:<div id="fare"></div> </li>
+                            <li>Gratuity: <div id="tip"></div></li>
+                            <li>Total:<div id="total"></div></li>
+                        </ul>
+                    </div>
+                    <div class="moreRideInfo">
+                        <div class="receiptTitle">More Info</div>
+                        <ul>
+                            <li>Date:</li>
+                            <li>Pickup Location:</li>
+                            <li>DropOff Location:</li>
+                            <li>Distance:</li>
+                            <li>Duration:</li>
+                        </ul>
+                    </div>
+                    <div class="rating">
+                        <div class="receiptTitle">Save your client</div>
+                        <div class="profile-big p2"></div>
+                    </div>
+                    <div id="rideDone">Done!</div>
+                </div>
+            </div>
+
+
+
+        </div>
+    </div>
+
+    <div class="overlayL hiddenL transitionH"></div>
+    <div class="overlayR hiddenR transitionH"></div>
+    <div class="overlayLX hiddenLX transitionH"></div>
+
+    <div class="popUpT2 hiddenT2 transitionH"></div>
+    <div class="popUpT3 hiddenT3 transitionH"></div>
+
+    <div id="map-canvas"/>
+
+
+    <!--================================================
+       Hidden elements
+    ==================================================-->
+
+    <!--==================
+         Menu (left)
+     ===================-->
+
+    <div id="menu" class="initiallyHidden">
+        <div class="header">
+            <div class="backLeftButton button"></div>
+            <div class="profile driver"></div>
+        </div>
+        <div class="content">
+            <div class="menuList">
+                <ul>
+                    <li><div class="reservationBut">Reservation</div></li>
+                    <li><div class="rideBookBut">Ride Book</div></li>
+                    <li><div class="passengerBut">Contacts</div></li>
+                    <li><div class="settingsBut">Settings</div></li>
+                    <li><div class="aboutBut">About</div></li>
+                    <li></li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!--==========================
+        menu items (from bottom)
+    ===========================-->
+    <!--===============
+        reservation list
+    =================-->
+    <div id="reservation" class="initiallyHidden">
+        <div class="header">
+            <div id="backReservationBut" class="backBut"></div>
+            <div class="reservationBut title">Reservation</div>
+        </div>
+
+        <div class="content">
+            <div class="list">
+                <ul>
+                    <li>
+                        <div class="profile ps5"></div>
+                        <div class="reservTime">April 29 at 3:40pm</div>
+                        <div class="pickUpLo">5030 Center Ave, Pittsburgh, PA</div>
+                        <div class="myTask button">my task</div>
+                    </li>
+                    <li>
+                        <div class="profile ps1"></div>
+                        <div class="reservTime">April 29 at 7:20pm</div>
+                        <div class="locationDetail">5000 Forbes Ave, Pittsburgh, PA</div>
+                        <div class="myTask button">my task</div>
+                    </li>
+                    <li>
+                        <div class="profile ps0"></div>
+                        <div class="reservTime">May 1 at 3:40pm</div>
+                        <div class="locationDetail">5550 Center Ave, Pittsburgh, PA</div>
+                        <div class="addToMyTask button">+</div>
+                    </li>
+                    <li>
+                        <div class="profile ps6"></div>
+                        <div class="reservTime">May 1  at 3:40pm</div>
+                        <div class="locationDetail">1000 Airport Blvd, Coraoplis, PA</div>
+                        <div class="addToMyTask button">+</div>
+                    </li>
+                    <li>
+                        <div class="profile ps0"></div>
+                        <div class="reservTime">May 1  at 3:40pm</div>
+                        <div class="locationDetail">2924 Juniper St, Pittsburgh, PA</div>
+                        <div class="addToMyTask button">+</div>
+                    </li>
+                    <li>
+                        <div class="profile ps0"></div>
+                        <div class="reservTime">May 1  at 3:40pm</div>
+                        <div class="locationDetail">2924 Juniper St, Pittsburgh, PA</div>
+                        <div class="addToMyTask button">+</div>
+                    </li>
+                    <li>
+                        <div class="profile ps0"></div>
+                        <div class="reservTime">May 1  at 3:40pm</div>
+                        <div class="locationDetail">2924 Juniper St, Pittsburgh, PA</div>
+                        <div class="addToMyTask button">+</div>
+                    </li>
+                    <li>
+                        <div class="profile ps0"></div>
+                        <div class="reservTime">May 1  at 3:40pm</div>
+                        <div class="locationDetail">2924 Juniper St, Pittsburgh, PA</div>
+                        <div class="addToMyTask button">+</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!--==================
+        ride book (right)
+     ===================-->
+
+    <div id="rideBook" class="initiallyHidden">
+        <div class="header">
+            <div id="backRideBookBut" class="backBut"></div>
+            <div class="rideBookBut title">Ride Book</div>
+        </div>
+        <div class="content">
+            <div class="list">
+                <ul>
+                    <li>
+                        <div class="profile-big p2"></div>
+                        <div class="rideInfo">
+                            <div class="driverName_rb">Mark Rocks</div>
+                            <div class="time_rb riding">Apr 18 at 3:54pm</div>
+                            <div class="placeA_rb">Work Place</div>
+                            <div class="placeB_rb">Home</div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="profile-big p1"></div>
+                        <div class="rideInfo">
+                            <div class="driverName_rb">Peter Hoom</div>
+                            <div class="time_rb">Apr 17 at 9:23pm</div>
+                            <div class="placeA_rb">5030 Centre Ave 3333333333366666666</div>
+                            <div class="placeB_rb">5000 Forbes Ave</div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li><div class="profile-big p4"></div></li>
+                    <li><div class="profile-big p6"></div></li>
+                    <li><div class="profile-big p8"></div></li>
+                    <li><div class="profile-big p5"></div></li>
+                    <li><div class="profile-big p7"></div></li>
+                    <li><div class="profile-big p2"></div></li>
+                    <li><div class="profile-big p9"></div></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+
+    <!--=================
+        passenger contacts
+    ===================-->
+    <!-- change backPassengerBut -->
+    <div id="passenger" class="initiallyHidden">
+        <div class="header">
+            <div id="backPassengerBut" class="backBut"></div>
+            <div class="passengerBut title">Driver Contacts</div>
+        </div>
+        <div class="content">
+            <div class="list">
+                <ul>
+                    <li>
+                        <div class="profile-big p3"></div>
+                        <div class="passengerInfo">
+                            <div class="passengerName_pc">Peter.H</div>
+                            <div class="phone_pc">Phone: 412 973 5656</div>
+                            <div class="ride_pc">Ride history: </div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="profile-big p1"></div>
+                        <div class="driverInfo">
+                            <div class="passengerName_pc">Mark Rocks</div>
+                            <div class="phone_pc">Phone: 412 993 0023</div>
+                            <div class="ride_pc">Ride history:</div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="profile-big p0"></div>
+                        <div class="driverInfo">
+                            <div class="passengerName_pc">Mike.C</div>
+                            <div class="phone_pc">Phone: 412 924 7511</div>
+                            <div class="ride_pc">Ride history:</div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li><div class="profile-big p6"></div></li>
+                    <li><div class="profile-big p8"></div></li>
+                    <li><div class="profile-big p5"></div></li>
+                    <li><div class="profile-big p7"></div></li>
+                    <li><div class="profile-big p2"></div></li>
+                    <li><div class="profile-big p9"></div></li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+    <!--===============
+        settings
+    =================-->
+
+    <div id="settings" class="initiallyHidden">
+        <div class="header">
+            <div id="backSettingsBut" class="backBut" ></div>
+            <div class="settingsBut title">Settings</div>
+        </div>
+        <div class="content">
+            <div class="p0 profile-big center"></div>
+            <div id="settingList">
+                <ul>
+                    <li><input type="name" placeholder="name"></li>
+                    <li><input type="email" placeholder="email address"></li>
+                    <li><input type="tel" value="" maxlength="10" placeholder="mobile number"></li>
+                    <li><input type="password" placeholder="password"></li>
+                </ul>
+
+                <ul>
+                    <input type="tel" value="" maxlength="16" id="creditNum" placeholder="add a credit card"></li>
+                </ul>
+
+                <div class="sign-in">
+                    <button type="button" class="button">DONE</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!--===============
+        about
+    =================-->
+
+    <div id="about" class="initiallyHidden">
+        <div class="header">
+            <div id="backAboutBut" class="backBut"></div>
+            <div class="aboutBut title">About</div>
+        </div>
+        <div class="content">
+            <div id="brief">
+                <span>Oride is designed for easy communication between passenger and driver</span>
+            </div>
+        </div>
+    </div>
+
+
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link href="reset.css" rel="stylesheet" type="text/css">
+	    <script src="jquery-1.9.0.js"></script>
+	    <meta name="viewport" content="width=device-width, 
+	    	initial-scale=1, maximum-scale=1, user-scalable=no">
+	</head>
+
+	<body>
+		<p id="words">Click the button to get your coordinates:</p>
+		<button type="button" onclick="getLocation();">
+			locationDetection
+		</button>
+
+		<script>
+	    	var x = document.getElementById("words");
+		    function getLocation(){
+				if (navigator.geolocation){
+			    	navigator.geolocation.getCurrentPosition(showPosition,
+			    		showError);
+			    }
+				else{x.innerHTML="Geolocation is not "+
+					"supported by this browser.";}
+			}
+			//shows the position
+			var showPosition = function(position){
+					homelat = position.coords.latitude;
+					homelon = position.coords.longitude;
+					lat1 = homelat; // home lat
+					lon1 = homelon; // home long
+					lat2 = 40.443011; // entropy lat
+					lon2 = -79.942119;//entropy lon
+					
+					if (typeof(Number.prototype.toRad) === "undefined") {
+					  Number.prototype.toRad = function() {
+					    return this * Math.PI / 180;
+					  }
+					}
+					var R = 6371; // km
+					var dLat = (lat2-lat1).toRad();
+					var dLon = (lon2-lon1).toRad();
+					var lat1 = lat1.toRad();
+					var lat2 = lat2.toRad();
+
+					var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+					        Math.sin(dLon/2) * Math.sin(dLon/2) * 
+					        Math.cos(lat1) * Math.cos(lat2); 
+					var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+					var d = R * c;
+
+					x.innerHTML= "Your latitude: " + homelat
+				    				+ "\n" + "Your longitude: " 
+				    				+ homelon + "\n" + 
+				    				"Distance from entropy: " + d + "km";
+			}
+			//if deny location sharing
+			function showError(error){
+				switch(error.code) {
+			    	case error.PERMISSION_DENIED:
+				      	x.innerHTML="User denied the request for Geolocation."
+				     	break;
+			    	case error.POSITION_UNAVAILABLE:
+			    		x.innerHTML="Location information is unavailable."
+			    		break;
+			    	case error.TIMEOUT:
+			    		x.innerHTML="The request to get user" + 
+			    		" location timed out."
+			    		break;
+			    	case error.UNKNOWN_ERROR:
+			      		x.innerHTML="An unknown error occurred."
+			      		break;
+			    }
+			  }
+	    	</script>
+	</body>
+
+
+</html>

@@ -1,0 +1,61 @@
+<!-- HTML for the menu of the tanks game -->
+
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Tanks - menu</title>
+	<link href="reset.css" rel="stylesheet" type="text/css">
+	<link href="style.css" rel="stylesheet" type="text/css">
+	<script src="jquery-1.9.0.js"></script>
+</head>
+
+<body>
+  <div id = "everything">
+	<div id = "mainheader">
+		<a href = "main.html"><img src = "logo.png"></a>	
+	</div>
+
+	
+	<div id = "menu">
+	<ul class = "oplist" type = "none">
+		<!-- Start Game leads to another page -->
+		<!-- The rest is DOM manipulation using jQuery in menu.js-->
+		<li class = "option">
+			<a href = "game.html">Start Game</a>
+		</li>
+
+		<li class = "option" id = "instButton">
+			<a href = "#"> Instructions </a>
+				<div id = "inst">
+				Click on icons to choose different Bullets<br>
+				Normal Bullets:    -1 Health<br>
+				Fire Bullets:      -2 Health<br>
+				Lightning Bullets: -2 Health with super cool lightning<br><br>
+
+				Press Left and Right key to move.<br>
+				Press Up and Down to adjust angle.<br><br>
+
+				Hold Space bar to Charge<br>
+				Release Space bar to Shoot<br>
+				</div>
+		</li>
+		
+		<li class = "option" id = "creditsButton">
+			<a href = "#">Credits</a>
+			<div id = "cred">
+				Made by Aaron Hsu, Jackson Lane, and Srinivasan Vijayaraghavan as a unit project for 15-237 at Carnegie Mellon University.
+				<br><br>
+				Thanks a lot to the course staff for their help and guidance.
+			</div>
+		</li>
+	</ul>
+
+	</div>
+
+	<script src="jquery-1.9.0.js"></script>
+	<script src="menu.js"></script>
+  </div>
+</body>
+
+</html>

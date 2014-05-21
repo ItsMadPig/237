@@ -1,0 +1,209 @@
+
+
+/* Style for the tank game */
+
+body {
+	background-color: #000;
+	color: #fff;
+}
+
+#header {
+	width:223px;
+	margin-left: auto;
+	margin-right: auto;
+	padding: 10px;
+	margin-top: 10px;
+}
+
+
+
+#everything	{
+	width: 400px;
+	height: 300px;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	margin-left: -300px;
+	margin-top: -200px;
+}
+
+ #mainheader {
+ 	margin-left: 110px;
+	width:358px;
+	height: 102px;
+	padding: 10px;
+	margin-top: 20px;
+}
+
+#menu	{
+	width: 600px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.gameover	{
+	display: none;
+	position: absolute;
+	top: 300px;
+	left: 500px;
+	font-family: Arial;
+	font-size: 42px;
+	color: #000;
+}
+
+a.gameover	{
+	color: #000;
+}
+
+
+a {
+	color: #0c8fff;
+	text-decoration: none;
+}
+
+
+.oplist {
+	text-align:center;
+	margin-top: 20px;
+	/* margin-left: 250px; */
+}
+
+.option {
+	font-family: Verdana;
+	font-size: 24px;
+	margin-top: 12px;
+	margin-bottom: 12px;
+}
+
+a:visited {
+	text-decoration: none;
+	color: #0c8fff;
+}
+
+a:hover {
+	text-decoration: none;
+	color:#71cbfc;
+}
+
+#inst	{
+	display: none;	/* Will display with jQuery's slideToggle */
+	text-align: center;
+	margin-top: 20px;
+	/* margin-left: -175px; */
+	font-family: Verdana;
+	color: #0c8fff;
+	font-size: 16px;
+	margin-bottom: 20px;
+}
+
+#cred	{
+	display: none;	/* Ditto */
+	text-align: center;
+	margin-top: 20px;
+	/* margin-left: -175px; */
+	font-family: Verdana;
+	color: #0c8fff;
+	font-size: 16px;
+	margin-bottom: 20px;
+}
+
+
+.linkBack	{
+	display: block;
+	margin-top: 10px;
+	margin-left: 220px;
+}
+
+#container {
+	min-width: 1450px;	
+	width: 100%;
+	text-align: center;
+	display: inline-block;
+	margin-left: auto;
+	margin-right:auto;
+	width: 1400;
+	height: 500;
+}
+
+#game {
+	display: inline-block;
+	width: 1200px;
+/*	margin-left: auto;
+	margin-right: auto; */
+	margin: 0px 15px 10px 0px
+}
+
+p.chat-listing	{
+	color: #000;
+	border-bottom: 1px solid #ccc;
+	margin-top: 10px;
+	padding-bottom: 10px;
+}
+
+h1 {
+  font-size: 64px;
+}
+
+.r {
+  color: #E40045;
+}
+
+.b {
+  color: #1142AA;
+}
+
+.g {
+  color: #00A67C;
+}
+
+.y {
+  color: #FFA900;
+}
+
+.wrapper	{
+  width: 700px;
+  margin: 70px auto 0;
+}
+
+#chat	{
+	text-align: left;
+	width: 200px;
+	display: inline-block;
+	background-color: #fff;
+}
+
+.chat-history	{
+  	background-color: #fff;
+  	font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	width: 200px;	/* Also change width of #thing if changing this */
+	margin-top: 0px;
+	margin-left: auto;
+	margin-right: auto;
+	margin-bottom: 0px;
+	height: 480px; /* some arbitrary height */
+	word-wrap: break-word;
+	overflow-y: auto;  /* could also use "scroll" instead of "auto" */
+}
+
+.row	{
+	width: 200px;
+	margin-top: 0px;
+	margin-left: -1px;
+}
+
+#chat-input	{
+	margin-top: 0px;
+}
+
+
+
+#footer {
+	font-size: 14px;
+	width: 150px;
+	margin-top: 20px;
+	margin-left: auto;
+	margin-right: auto;
+	height: 50px;
+	text-align: center;
+	font-family: Verdana;
+}

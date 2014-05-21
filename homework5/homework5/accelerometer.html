@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link href="reset.css" rel="stylesheet" type="text/css">
+	    <script src="jquery-1.9.0.js"></script>
+	    <meta id="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+	    <script>
+	    Score = 0;
+	    accumTime = 0;
+	    //static Ball object
+	    var staticBall = function(config){
+	    	this.color = config.color;
+	    	this.radius = config.radius;
+	    	this.x = config.x;
+	    	this.y = config.y;
+	    	this.vx = 0;
+	    	this.vy = 0;
+	    	this.maxX = config.maxX;
+	    	this.maxY = config.maxY;
+	    }
+	    staticBall.prototype.update = function(){
+
+		    if (this.x - this.radius < 0){
+		        this.x = this.radius;
+		    }
+		    else if(this.x + this.radius > this.maxX){
+		        this.x = this.maxX - this.radius;
+		    }
+		    if (this.y - this.radius < 0){
+		        this.y = this.radius;
+		    }
+		    else if (this.y + this.radius > this.maxY){
+		        this.y = this.maxY - this.radius;
+		    }
+		}
+
+	    staticBall.prototype.draw = function(scaledPage){
+			scaledPage.fillCircle(this.x, this.y, this.radius, this.color);
+		}
+
+		//moving ball object
+	    var movingBall = function(config){
+	    	this.color = config.color;
+	    	this.radius = config.radius;
+	    	this.x = config.x;
+	    	this.y = config.y;
+	    	this.vx = 0;
+	    	this.vy = 0;
+	    	this.maxX = config.maxX;
+	    	this.maxY = config.maxY;
+	    }
+
+	    movingBall.prototype.update = function(timeDiff){
+	    	this.x += this.vx*timeDiff/20;
+		    this.y += this.vy*timeDiff/20;
+
+		    if (this.x - this.radius < 0){
+		        this.x = this.radius;
+		        this.vx = -this.vx;
+		    }
+		    else if(this.x + this.radius > this.maxX){
+		        this.x = this.maxX - this.radius;
+		        this.vx = -this.vx;
+		    }
+		    if (this.y - this.radius < 0){
+		        this.y = this.radius;
+		        this.vy = -this.vy;
+		    }
+		    else if (this.y + this.radius > this.maxY){
+		        this.y = this.maxY - this.radius;
+		        this.vy = -this.vy;
+		    }
+		}
+		movingBall.prototype.draw = function(scaledPage){
+			scaledPage.fillCircle(this.x, this.y, this.radius, this.color);
+		}
+
+		//Accelerometer objects
+	    var Accelerometer = function(){
+	    	this.x = 0;
+	    	this.y = 0;
+	    	this.z = 0;
+	    }
+
+		Accelerometer.prototype.startListening = function(){
+		    if (window.ondevicemotion !== undefined){
+		        this.startListeningDeviceMotion();
+		    } else{
+		    	alert("Only supported in IOS!!!")
+		    }
+		}
+
+		Accelerometer.prototype.startListeningDeviceMotion = function(){
+		    var timesEventFired = 0;
+		    var enabled = false;
+		    var tooBigX = 100; //turns out firefox actually posts devicemotion events 
+		                        //with random (generally large) numbers
+		    window.addEventListener('devicemotion', function(event){
+		        if (event.accelerationIncludingGravity.x !== null &&
+		            event.accelerationIncludingGravity.y !== null  &&
+		            event.accelerationIncludingGravity.z !== null &&
+		            event.accelerationIncludingGravity.x <= tooBigX){
+		            if (enabled){
+		                this.x = event.accelerationIncludingGravity.x;
+		                this.y = event.accelerationIncludingGravity.y;
+		                this.z = event.accelerationIncludingGravity.z;
+		            }
+		            timesEventFired += 1;
+
+		        }
+		    }.bind(this));
+		    setTimeout(function(){
+		        if (timesEventFired <= 3){
+		            alert('no accelerometer detected!doesn\'t support PCs');
+		        	this.startListeningKeys();
+		        }
+		        else
+		            enabled = true;
+		    }.bind(this),  1000);
+		}
+		//gets the previous x and y
+		Accelerometer.prototype.getLast = function(){
+		    if (window.isIOS()){
+		        return {
+		            x: this.x,
+		            y: -this.y,
+		            z: this.z
+		        };
+		    }
+		    else{
+		        return {
+		            x: -this.x,
+		            y: this.y,
+		            z: this.z
+		        };
+
+		        alert("Only Supports IOS!!!");
+		    }
+		}
+
+		//Adjusted page to size of screen
+		ScaledPage = function(canvas, virtualWidth){
+		    this.canvas = canvas;
+		    this.page = this.canvas[0].getContext('2d');
+		    this.scale = this.canvas.width() / virtualWidth;
+		}
+
+		ScaledPage.prototype.pageToCanvas = function(pageX, pageY) {
+		    var offset = this.canvas.offset();
+		    var x = (pageX - offset.left)  / this.scale;
+		    var y = (pageY - offset.top)   / this.scale;
+		    return { 'x': x,
+		             'y': y
+		           };
+		}
+
+		ScaledPage.prototype.canvasToPage = function(canvasX, canvasY) {
+		    return { 'x': canvasX * this.scale,
+		             'y': canvasY * this.scale
+		           };
+		}
+		//clears the canvas
+		ScaledPage.prototype.fillRect = function(x, y, width, height, style){
+		    this.page.fillStyle = style;
+		    this.page.fillRect(x * this.scale, y * this.scale, width * this.scale, height*this.scale);
+		}
+
+		ScaledPage.prototype.fillCircle = function(x, y, radius, style){
+		    this.page.fillStyle = style;
+		    this.page.beginPath();
+		    this.page.arc(x * this.scale, y * this.scale, radius * this.scale, 0, Math.PI*2, true);
+		    this.page.closePath();
+		    this.page.fill();
+		}
+
+		//BallApp object
+		var BallApp = function(){
+			this.setup();
+			window.deltaTimeRequestAnimationFrame(this.draw.bind(this));
+		}
+
+		BallApp.prototype.setup = function(){
+			window.patchRequestAnimationFrame();
+			window.patchBind();
+			this.initCanvas();
+			this.initBall();
+			this.initAccelerometer();
+			//define and macros and set values
+			RADIUS = 5;
+		}
+		//inits the canvas
+		BallApp.prototype.initCanvas = function(){
+		    this.body = $(document.body);
+		    this.body.width(document.body.offsetWidth);
+		    this.body.height(window.innerHeight - 20);
+		    this.width = 320;
+		    this.height = 480;
+		    this.canvas = window.makeAspectRatioCanvas(this.body, this.width/this.height);
+		    this.page = new ScaledPage(this.canvas, this.width);
+		};
+
+		//inits the ball
+		BallApp.prototype.initBall = function(){	   
+			var randomStaticX = Math.floor((Math.random()*this.width));
+			var randomStaticY = Math.floor((Math.random()*this.height));
+
+			var randomMovingX = Math.floor((Math.random()*this.width));
+			var randomMovingY = Math.floor((Math.random()*this.height));
+		    this.staticBall = new staticBall({'x': randomStaticX, 
+		    								  'y': randomStaticY,
+		                                      'radius': 15,
+		                                      'maxX': this.width, 
+		                                      'maxY': this.height,
+		                                  	  'color': "#00688B"});
+
+		    this.movingBall = new movingBall({'x': randomMovingX, 
+		    								  'y': randomMovingY,
+		                                      'radius': 15,
+		                                      'maxX': this.width, 
+		                                      'maxY': this.height,
+		                                      'color': "#FF0000"});
+		    this.staticBall.vx = 0;
+		    this.staticBall.vy = 0;
+			this.movingBall.vx = 0;
+		    this.movingBall.vy = 0;
+		}
+		//resets a random position for the balls
+		BallApp.prototype.resetPosition = function(){
+			var randomStaticX = Math.floor((Math.random()*this.width));
+			var randomStaticY = Math.floor((Math.random()*this.height));
+
+			var randomMovingX = Math.floor((Math.random()*this.width));
+			var randomMovingY = Math.floor((Math.random()*this.height));
+
+			this.staticBall.x = randomStaticX,
+			this.staticBall.y = randomStaticY,
+
+			this.movingBall.x = randomMovingX,
+			this.movingBall.y = randomMovingY,
+
+		    this.staticBall.vx = 0;
+		    this.staticBall.vy = 0;
+			this.movingBall.vx = 0;
+		    this.movingBall.vy = 0;
+		}
+
+		BallApp.prototype.initAccelerometer = function(){
+		    this.accelerometer = new Accelerometer();
+		    this.accelerometer.startListening();
+		}
+		
+		BallApp.prototype.showScore = function(scaledPage){
+			scaledPage.page.font="20px Verdana";
+			scaledPage.page.fillStyle = "red";
+			scaledPage.page.fillText(Score, this.width*scaledPage.scale/2, this.height*scaledPage.scale/2);
+		}
+		//draws everything
+		BallApp.prototype.draw = function(timeDiff){
+		    this.clearPage();
+		    this.showScore(this.page);
+		    this.drawBall(timeDiff);
+		    this.updateBall();
+
+
+		    if (this.hasCollided()){
+		    	this.resetPosition();
+		    	Score +=10;
+		    }
+		    accumTime += timeDiff;
+		    if (accumTime >=1000){
+		    	accumTime -= 1000;
+		    	if (Score > 0){
+		    		Score -=1;
+		    	}
+		    }
+		}
+		//clears the page
+		BallApp.prototype.clearPage = function(){
+		    this.page.fillRect(0, 0, this.width, this.height, '#eee');
+		}
+		//detects collision
+		BallApp.prototype.hasCollided = function(){
+			var height = 2*this.movingBall.radius;
+			var width = 2*this.movingBall.radius;
+	        var leftmovingBall = this.movingBall.x;
+	        var topmovingBall = this.movingBall.y;
+	        var rightmovingBall = this.movingBall.x + width;
+	        var botmovingBall = this.movingBall.y + height;
+	        var leftstaticBall = this.staticBall.x;
+	        var topstaticBall = this.staticBall.y;
+	        var rightstaticBall = this.staticBall.x + width;
+	        var botstaticBall = this.staticBall.y + height;
+
+	        var bit1, bit2, bit3, bit4;
+	        bit1 = ((topmovingBall <= topstaticBall) & (botmovingBall <= topstaticBall));
+	        bit2 = ((topmovingBall >= botstaticBall) & (botmovingBall >= botstaticBall));
+	        bit3 = ((leftmovingBall <= leftstaticBall) & (rightmovingBall <= leftstaticBall));
+	        bit4 = ((leftmovingBall >= rightstaticBall) & (rightmovingBall >= rightstaticBall));
+
+	        // if 1 then not collided, if 0 then collided
+	        if ((bit1 | bit2 | bit3 | bit4) === 0) {
+	            return true;
+	        }
+	        else {
+	            return false;
+	        }
+		}
+		//draws the balls and updates
+		BallApp.prototype.drawBall = function(timeDiff){
+		    this.movingBall.update(timeDiff);
+		    this.staticBall.update()
+		    this.staticBall.draw(this.page);
+		    this.movingBall.draw(this.page);
+		}
+		//updates the balls according to the tilt
+		BallApp.prototype.updateBall = function(){
+		    var lastAcceleration = this.accelerometer.getLast();
+		    this.movingBall.x += lastAcceleration.x;
+		    this.movingBall.y += lastAcceleration.y;
+		}
+
+
+		window.util = function(){}
+
+		window.isIOS = function(){
+			return !!((navigator.userAgent.match(/iPhone/i))||
+					navigator.userAgent.match(/iPod/i) ||
+					navigator.userAgent.match(/iPad/i));
+		};
+
+		window.patchRequestAnimationFrame = function(){
+		    window.requestAnimationFrame =
+		            window.requestAnimationFrame ||
+		            window.mozRequestAnimationFrame ||
+		            window.webkitRequestAnimationFrame ||
+		            window.msRequestAnimationFrame ||
+		            function(fn){
+		                setTimeout(function(){
+		                    fn(Date.now());
+		                }, 1000/60);
+		            };
+		};
+
+		window.patchBind = function(){
+		   if (Function.prototype.bind === undefined){
+		      Function.prototype.bind = function (bind) {
+		           var self = this;
+		           return function () {
+		               var args = Array.prototype.slice.call(arguments);
+		               return self.apply(bind || null, args);
+		           };
+		       };
+		   }
+		};
+
+		window.deltaTimeRequestAnimationFrame = function(toBeCalled){
+		    var addTimeDiff = function(time){
+		        if (window.util.lastRequestAnimationFrame !== undefined){
+		            toBeCalled(time - window.util.lastRequestAnimationFrame);
+		        }
+		        window.util.lastRequestAnimationFrame = time;
+		        window.requestAnimationFrame(addTimeDiff);
+		    }
+		    window.requestAnimationFrame(addTimeDiff);
+		};
+
+		window.makeAspectRatioCanvas = function(parent, aspectRatio){
+		    var canvas = $("<canvas></canvas>");
+		    var calculateDims = function(aspectRatio, maxWidth, maxHeight){
+		        var width = Math.min(maxWidth, maxHeight*aspectRatio);
+		        var height = Math.min(maxHeight, maxWidth/aspectRatio);
+		        return { 'width': width, 'height': height };
+		    };
+		    parent.append(canvas);
+		    var dimensions = calculateDims(aspectRatio, parent.width(), parent.height());
+		    canvas.prop('width', dimensions.width);
+		    canvas.prop('height', dimensions.height);
+		    canvas.html("Your browser doesn't support canvas");
+		    return canvas;
+		};
+		</script>
+
+		<script>
+			window.onload = function(){
+				new BallApp();
+			};
+		</script>
+
+	    <title> accelerometer </title>
+	</head>
+
+	<body>
+
+	</body>
+
+
+</html>

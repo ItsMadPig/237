@@ -1,0 +1,1 @@
+{"user2":{"oppID":"user1","xTank":133,"yTank":450,"xBullet":163.5,"yBullet":410,"angleFrame":1,"bulletType":0,"direction":"right","bulletPower":28,"going":true,"victory":false,"levelIndex":4},"user1":{"oppID":"user2","xTank":1023,"yTank":450,"xBullet":1054,"yBullet":410,"angleFrame":1,"bulletType":0,"direction":"left","bulletPower":28,"going":false,"victory":true,"levelIndex":4}}

@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html>
+<!--=========================
+       passenger's HTML
+==========================-->
+<head>
+    <title> Oride </title>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="apple-touch-icon-precomposed" href="/mobile/icon.png" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <link href="/css/reset.css" rel="stylesheet" type="text/css">
+    <link href="/css/style.css" rel="stylesheet" type="text/css">
+
+    <script src="/libs/jq/jquery-1.8.2.min.js"></script>
+    <script src="/libs/jq/addTappableJQPlugin.js"></script>
+    <script src="UI.js"></script>
+
+    <script type="text/javascript"
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAzs3-Vf6NroQ3y0fxvf_UY5piCWiVCWhw&sensor=true">
+    </script>
+    <script src="http://localhost:8989/socket.io/socket.io.js"></script>
+
+    <script type="text/javascript">
+
+        //////////////////////////
+        ///////variables
+        //////////////////////////
+
+        //markers dictionary
+        //1: current position
+        //2: start marker
+        //3: end marker
+        //4: all markers of drivers available
+        var markersDict = {};
+        var zoomValue = 14;
+
+        /////////////////////////
+        ///socket
+        /////////////////////////
+        /*var socket = io.connect("http://localhost:8989");
+
+        socket.on("status", function(data) {
+          if (data.success) {
+            alert("Message successfully sent");
+          } else {
+            alert("Message failed to send");
+          }
+        });
+        socket.on("newmsg", function(data) {
+            $("#messages").append($("<li>").html(data.body));
+        });
+
+        */
+        /////////////////////////
+        ///google map values
+        /////////////////////////
+        function initialize() {
+            navigator.geolocation.getCurrentPosition(function(position){
+                var lat = position.coords.latitude;
+                var lon = position.coords.longitude;
+
+
+                //////default map option///////////
+                var mapOptions = {
+                    center: new google.maps.LatLng(lat,lon),
+                    zoom: zoomValue,
+                    mapTypeId: google.maps.MapTypeId.ROADMAP,
+                    disableDefaultUI: true,
+                    styles:[{
+                        featureType:"poi",
+                        elementType:"labels",
+                        stylers:[{
+                            visibility:"off"
+                        }]
+                    }]
+                };
+
+                ///////creates new map//////////
+                map = new google.maps.Map(document.getElementById("map-canvas"),
+                        mapOptions);
+
+
+                //////////////makes home marker///////////////
+                var marker = new google.maps.Marker({
+                    position: map.getCenter(),
+                    map: map,
+                    title: 'Get Picked Up Here'
+                });
+
+                ////////bouncing animation/////////
+                function toggleBounce() {
+                    if (marker.getAnimation() != null) {
+                        marker.setAnimation(null);
+                    } else {
+                        marker.setAnimation(google.maps.Animation.BOUNCE);
+                    }
+                }
+
+                /////////click on marker////////////
+                google.maps.event.addListener(marker, 'click', function() {
+                    map.setCenter(marker.getPosition());
+                    toggleBounce();
+                    infoWindow.close();
+                });
+
+                ////// Instantiate a directions service.
+                directionsService = new google.maps.DirectionsService();
+
+                // Create a renderer for directions and bind it to the map.
+                var rendererOptions = {
+                    map: map
+                }
+                directionsDisplay = new google.maps.DirectionsRenderer(rendererOptions)
+
+            });
+        }
+
+
+
+        ///////////////////////////
+        ///geocoder
+        ///////////////////////////
+
+        /////////Geocoder//////////
+        var geocoder = new google.maps.Geocoder();
+        ///////address shifts map////////
+        function codeAddress(location) {
+            if (location === "start"){
+                //+Pittsburgh ensures search is in pittsburgh
+                var address = $("#start").val() + " Pittsburgh";
+            } else if (location === "end"){
+                var address = $("#end").val() + " Pittsburgh";
+            } else {
+                alert("error");
+            }
+
+            geocoder.geocode({'address': address}, function(results, status) {
+                if((status === google.maps.GeocoderStatus.OK) &&
+                    //if searching outside of pittsburgh
+                        (results[0]["formatted_address"].indexOf("Pittsburgh")===-1)){
+                    alert('this app is only limited to use in Pittsburgh')
+                }else if (status === google.maps.GeocoderStatus.OK) {
+                    //if searching within pittsburgh
+                    console.log(results);
+                    map.setCenter(results[0].geometry.location);
+                    ///makes new marker according to start or end
+                    /// then puts marker into marker dictionary
+                    var shadow = 'https://maps.google.com/mapfiles/kml/shapes/schools_maps.shadow.png';
+                    if (location === 'start'){
+                        var marker = new google.maps.Marker({
+                            position: results[0].geometry.location,
+                            map: map,
+                            title: 'Get Picked Up Here',
+                            icon: 'http://i.imgur.com/4uDrQ8m.png',       //icon image
+                            shadow: shadow, // shadow image
+                            draggable: true
+                        });
+                        if (markersDict["start"] !== undefined){
+                            console.log(markersDict['start']);
+                            markersDict["start"].setMap(null);
+                            delete markersDict['start'];
+                        }
+                        markersDict["start"] = marker;
+                        google.maps.event.addListener(marker, 'dragend', function() {
+                            //add marker drag event listener
+                            codeLatLng(marker);
+                        });
+                    } else if (location === "end"){
+                        var marker = new google.maps.Marker({
+                            map: map,
+                            position: results[0].geometry.location,
+                            title: 'Get Droped Off Here',
+                            icon: 'http://i.imgur.com/Y6LdJ9T.png',
+                            shadow: shadow,
+                            draggable: true
+                        });
+                        if (markersDict["end"] !== undefined){
+                            markersDict["end"].setMap(null);
+                            delete markersDict["end"];
+                        }
+                        markersDict["end"] = marker;
+                        google.maps.event.addListener(marker, 'dragend', function() {
+                            //adds marker drag evene listener
+                            codeLatLng(marker);
+                        });
+                    }
+                }else {
+                    //if status not ok
+                    alert('Geocode was not successful for the following reason: ' + status);
+                }
+            });
+        }
+
+        ///////connects between the two markers
+
+
+        ///////allows dragging motion of markers
+
+
+        ///////map-shift outputs address///////
+        function codeLatLng(marker) {
+            var lat = marker.position.jb;
+            var lng = marker.position.kb;
+            var latlng = new google.maps.LatLng(lat, lng);
+            geocoder.geocode({'latLng': latlng}, function(results, status) {
+                if (status == google.maps.GeocoderStatus.OK) {
+                    if (results[0]){
+                        console.log(marker);
+                        if (JSON.stringify(marker.getPosition()) === JSON.stringify(markersDict["start"].getPosition())){
+                            $('#start').val(results[0].formatted_address);
+                        } else if (JSON.stringify(marker.getPosition()) === JSON.stringify(markersDict["end"].getPosition())){
+                            $('#end').val(results[0].formatted_address);
+                        }
+                    } else {
+                        alert('No results found');
+                    }
+                } else {
+                    alert('Geocoder failed due to: ' + status);
+                }
+            });
+        }
+
+            ///////initialize google map//////////
+        google.maps.event.addDomListener(window, 'load', initialize);
+
+        //////////////////////////////
+        //Init after requesting pickup pressed
+        //////////////////////////////
+
+
+
+    </script>
+
+
+</head>
+
+<body>
+
+    <!--===============================================
+            page structure: main page - set location
+    =================================================-->
+
+    <div class="page">
+
+        <div class="header">
+            <div id="menuButton" class="button"></div>
+            <div id="bookButton" class="button"></div>
+
+            <div class="processBalls_bottom">
+                <div id="layerBall11" >
+                    <div class="ball11"></div>
+                    <div class="line11"></div>
+                </div>
+                <div id="layerBall22">
+                    <div class="ball22"></div>
+                    <div class="line22"></div>
+                </div>
+                <div id="layerBall33">
+                    <div class="ball33"></div>
+                    <div class="line33"></div>
+                </div>
+                <div id="layerBall44">
+                    <div class="ball44"></div>
+                </div>
+            </div>
+            <div class="processBalls">
+                <div id="layerBall1" >
+                    <div class="ball1"></div>
+                    <div class="line1 hideBall"></div>
+                    <div id="layerPulse1" class="pulse1"></div>
+                </div>
+
+                <div id="layerBall2">
+                    <div class="ball2 hideBall"></div>
+                    <div class="line2 hideBall"></div>
+                    <div class="pulse2 hideBall"></div>
+                </div>
+
+                <div id="layerBall3">
+                    <div class="ball3 hideBall"></div>
+                    <div class="line3 hideBall"></div>
+                    <div class="pulse3 hideBall"></div>
+                </div>
+
+                <div id="layerBall4">
+                    <div class="ball4 hideBall"></div>
+                    <div class="pulse4 hideBall"></div>
+                </div>
+            </div>
+
+            <div class="titleMain">Set Location</div>
+
+        </div>
+
+
+        <div class="content" id="set_location" >
+
+            <!--=============================
+                1st step: set location
+            ==============================-->
+            <div id="setLocation_area">
+                <div class="setLocation_panel" id="startP">
+                    <div id="startPS" class="setLoaction-subTitle">Start</div>
+                        <form name="startForm" action="javascript:codeAddress('start')">
+                            <input type="text" class="setLoInput" id="start" placeholder="Starting Location">
+                        </form>
+                    <div class="addressBook_icon"></div>
+                </div>
+                <div class="setLocation_panel" id="endP">
+                    <div id="endPS" class="setLoaction-subTitle">End</div>
+                        <form name="endForm" action="javascript:codeAddress('end')">
+                            <input type="text" class="setLoInput" id="end" placeholder="Destination">
+                        </form>
+                    <div class="addressBook_icon"></div>
+                </div>
+                <div class="setLocation_panel" id="timeSet">
+                    <div id="timeSetS" class="setLoaction-subTitle">When</div>
+                    <label for="nowInput"><div id="nowBut" class="button_flat"><input type="checkbox" id="nowInput">now</div></label>
+                    <input type="datetime-local" name="pickupTime" class="setLoInput" id="pickupTime">
+                </div>
+                <div class="setLocation_panel" id="driverChoose">
+                    <div id="driverChooseS" class="setLoaction-subTitle">Who</div>
+                    <label for="assignDriverInput"><div id="assignDriverBut" class="button_flat"><input type="checkbox" id="assignDriverInput">assign me a driver</div></label>
+                    <div id="chooseMyDriverBut" class="button_flat">choose my driver</div>
+                </div>
+            </div>
+
+
+            <!--<div class="aviCar"></div>
+            <div id="dropPinS"></div>
+            <div id="dropPinE"></div>-->
+
+            <div id="request" class="circleComfirm">Request<div class="next"></div></div>
+
+
+            <!--=============================
+               2rd step: waiting
+            ==============================-->
+            <div id="waitingSlide" class="initiallyHidden">
+                <div class="howLong">Get picked up in <strong id="timeToPickup">14</strong> mins</div>
+                <div class="callDriver">
+                    <div class="profile driver"></div>
+                    <div class="call"></div>
+                    <div class="driverName_s">Peter.H</div>
+                </div>
+            </div>
+            <div id="bumpMeet" class="circleComfirm">Start Ride</div>
+
+            <!--=============================
+            3rd step: on the ride
+            ==============================-->
+            <div id="onRideSlide" class="initiallyHidden">
+                <div class="howLong"><p>Arrive in <strong id="timeToEnd">19</strong> mins</p></div>
+                <div class="callDriver">
+                    <div class="profile driver"></div>
+                    <div class="driverName_s">Peter.H</div>
+                </div>
+            </div>
+            <div id="bumpArrive" class="circleComfirm">Finish!</div>
+
+            <!--=============================
+            4th step: finish
+            ==============================-->
+            <div id="receipt">
+                <div class="wrap">
+                    <div class="receiptTitle">Fare</div>
+                    <div id="bigFare">$16</div>
+                    <div class="fare">
+                        <ul>
+                            <li>Fare:<div id="fare"></div> </li>
+                            <li>Gratuity: <div id="tip"></div></li>
+                            <li>Total:<div id="total"></div></li>
+                        </ul>
+                    </div>
+                    <div class="moreRideInfo">
+                        <div class="receiptTitle">More Info</div>
+                        <ul>
+                            <li>Date:</li>
+                            <li>Pickup Location:</li>
+                            <li>DropOff Location:</li>
+                            <li>Distance:</li>
+                            <li>Duration:</li>
+                        </ul>
+                    </div>
+                    <div class="rating">
+                        <div class="receiptTitle">Rate your driver</div>
+                        <div class="profile-big p3"></div>
+                        <div class="ratingBut">
+                            <ul>
+                                <li class="rp1"></li>
+                                <li class="rp2"></li>
+                                <li class="rp3"></li>
+                                <li class="rp4"></li>
+                                <li class="rp5"></li>
+                            </ul>
+                            <div class="r0"></div>
+                        </div>
+                    </div>
+                    <div id="rideDone">Thanks!</div>
+                </div>
+            </div>
+
+
+
+        </div>
+    </div>
+
+    <div class="overlayL hiddenL transitionH"></div>
+    <div class="overlayR hiddenR transitionH"></div>
+    <div class="overlayLX hiddenLX transitionH"></div>
+
+    <div class="popUpT2 hiddenT2 transitionH"></div>
+    <div class="popUpT3 hiddenT3 transitionH"></div>
+
+    <div class="chooseLay hiddenC transitionH"></div>
+
+    <div id="map-canvas"/>
+
+
+    <!--================================================
+       Hidden elements
+    ==================================================-->
+
+    <!--==================
+         Menu (left)
+     ===================-->
+
+    <div id="menu" class="initiallyHidden">
+        <div class="header">
+            <div class="backLeftButton button"></div>
+            <div class="profile passenger"></div>
+        </div>
+        <div class="content">
+            <div class="menuList">
+                <ul>
+                    <li><div class="rideBookBut">Ride Book</div></li>
+                    <li><div class="addressBut">Address Book</div></li>
+                    <li><div class="driversBut">Driver Contacts</div></li>
+                    <li><div class="settingsBut">Settings</div></li>
+                    <li><div class="aboutBut">About</div></li>
+                    <li></li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+    <!--==================
+        ride book (right)
+     ===================-->
+
+    <div id="rideBook" class="initiallyHidden">
+        <div class="header">
+            <div class="backRightButton button"></div>
+            <div class="rideBookBut title">Ride Book</div>
+        </div>
+        <div class="content">
+            <div class="list">
+                <ul>
+                    <li>
+                        <div class="profile-big p3"></div>
+                        <div class="rideInfo">
+                            <div class="driverName_rb">Mark Rocks</div>
+                            <div class="time_rb riding">Apr 18 at 3:54pm</div>
+                            <div class="placeA_rb">Work Place</div>
+                            <div class="placeB_rb">Home</div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="profile-big p1"></div>
+                        <div class="rideInfo">
+                            <div class="driverName_rb">Peter Hoom</div>
+                            <div class="time_rb">Apr 17 at 9:23pm</div>
+                            <div class="placeA_rb">5030 Centre Ave 3333333333366666666</div>
+                            <div class="placeB_rb">5000 Forbes Ave</div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li><div class="profile-big p4"></div></li>
+                    <li><div class="profile-big p6"></div></li>
+                    <li><div class="profile-big p8"></div></li>
+                    <li><div class="profile-big p5"></div></li>
+                    <li><div class="profile-big p7"></div></li>
+                    <li><div class="profile-big p2"></div></li>
+                    <li><div class="profile-big p9"></div></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!--==========================
+        menu items (from bottom)
+    ===========================-->
+
+    <!--===============
+        address book
+    =================-->
+
+    <div id="addressBook" class="initiallyHidden">
+        <div class="header">
+            <div id="backAddressBut" class="backBut"></div>
+            <div class="addressBut title">Address Book</div>
+        </div>
+
+        <div class="content">
+            <div class="list">
+                <ul>
+                    <li>
+                        <div class="addressIcon ad_home"></div>
+                        <div class="locationName">Home</div>
+                        <div class="locationDetail">5030 Center Ave, Pittsburgh, PA</div>
+                    </li>
+                    <li>
+                        <div class="addressIcon ad_work"></div>
+                        <div class="locationName">Carnegie Mellon</div>
+                        <div class="locationDetail">5000 Forbes Ave, Pittsburgh, PA</div>
+                    </li>
+                    <li>
+                        <div class="addressIcon ad_shopping"></div>
+                        <div class="locationName">Giant Eagle Market District</div>
+                        <div class="locationDetail">5550 Center Ave, Pittsburgh, PA</div>
+                    </li>
+                    <li>
+                        <div class="addressIcon ad_airport"></div>
+                        <div class="locationName">Pittsburgh International Airport</div>
+                        <div class="locationDetail">1000 Airport Blvd, Coraoplis, PA</div>
+                    </li>
+                    <li>
+                        <div class="addressIcon ad_d"></div>
+                        <div class="locationName">2924 Juniper St</div>
+                        <div class="locationDetail">2924 Juniper St, Pittsburgh, PA</div>
+                    </li>
+                    <li>
+                        <div class="addressIcon ad_d"></div>
+                        <div class="locationName">3456 goople St</div>
+                        <div class="locationDetail">2924 Juniper St, Pittsburgh, PA</div>
+                    </li>
+                    <li><div class="addressIcon ad_d"></div></li>
+                    <li><div class="addressIcon ad_d"></div></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!--=================
+        driver contacts
+    ===================-->
+
+    <div id="drivers" class="initiallyHidden">
+        <div class="header">
+            <div id="backDriversBut" class="backBut"></div>
+            <div class="driversBut title">Driver Contacts</div>
+        </div>
+        <div class="content">
+            <div class="list">
+                <ul>
+                    <li>
+                        <div class="profile-big p3"></div>
+                        <div class="driverInfo">
+                            <div class="driverName_dc">Peter.H</div>
+                            <div class="phone_dc">Phone: 412 973 5656</div>
+                            <div class="rate_dc">Rate: <div class="r0_s r5"></div></div>
+                            <div class="review_dc">Review: >> </div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="profile-big p1"></div>
+                        <div class="driverInfo">
+                            <div class="driverName_dc">Mark Rocks</div>
+                            <div class="phone_dc">Phone: 412 993 0023</div>
+                            <div class="rate_dc">Rate<div class="r0_s r4"></div></div>
+                            <div class="review_dc">Review: </div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="profile-big p4"></div>
+                        <div class="driverInfo">
+                            <div class="driverName_dc">Mike.C</div>
+                            <div class="phone_dc">Phone: 412 924 7511</div>
+                            <div class="rate_dc">Rate<div class="r0_s r3"></div></div>
+                            <div class="review_dc">Review: </div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li><div class="profile-big p6"></div></li>
+                    <li><div class="profile-big p8"></div></li>
+                    <li><div class="profile-big p5"></div></li>
+                    <li><div class="profile-big p7"></div></li>
+                    <li><div class="profile-big p2"></div></li>
+                    <li><div class="profile-big p9"></div></li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+    <!--===============
+        settings
+    =================-->
+
+    <div id="settings" class="initiallyHidden">
+        <div class="header">
+            <div id="backSettingsBut" class="backBut" ></div>
+            <div class="settingsBut title">Settings</div>
+        </div>
+        <div class="content">
+            <div class="p0 profile-big center"></div>
+            <div id="settingList">
+                <ul>
+                    <li><input type="name" placeholder="name"></li>
+                    <li><input type="email" placeholder="email address"></li>
+                    <li><input type="tel" value="" maxlength="10" placeholder="mobile number"></li>
+                    <li><input type="password" placeholder="password"></li>
+                </ul>
+
+                <ul>
+                    <input type="tel" value="" maxlength="16" id="creditNum" placeholder="add a credit card"></li>
+                </ul>
+
+                <div class="sign-in">
+                    <button type="button" class="button">DONE</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!--===============
+        about
+    =================-->
+
+    <div id="about" class="initiallyHidden">
+        <div class="header">
+            <div id="backAboutBut" class="backBut"></div>
+            <div class="aboutBut title">About</div>
+        </div>
+        <div class="content">
+            <div id="brief">
+                <span>Oride is designed for easy communication between passenger and driver</span>
+            </div>
+        </div>
+    </div>
+
+    <!--==============================
+        choose addressBook
+    ================================-->
+    <div id="chooseAddressBookLay" class="initiallyHidden">
+        <div class="header">
+            <div class="title">Choose address</div>
+        </div>
+
+        <div class="content">
+            <div class="list">
+                <ul>
+                    <li>
+                        <div class="chooseAddressBut button">choose</div>
+                        <div class="addressIcon ad_home"></div>
+                        <div class="locationName">Home</div>
+                        <div class="locationDetail">5030 Center Ave, Pittsburgh, PA</div>
+                    </li>
+                    <li>
+                        <div class="chooseAddressBut button">choose</div>
+                        <div class="addressIcon ad_work"></div>
+                        <div class="locationName">Carnegie Mellon</div>
+                        <div class="locationDetail">5000 Forbes Ave, Pittsburgh, PA</div>
+                    </li>
+                    <li>
+                        <div class="chooseAddressBut button">choose</div>
+                        <div class="addressIcon ad_shopping"></div>
+                        <div class="locationName">Giant Eagle Market District</div>
+                        <div class="locationDetail">5550 Center Ave, Pittsburgh, PA</div>
+                    </li>
+                    <li>
+                        <div class="chooseAddressBut button">choose</div>
+                        <div class="addressIcon ad_airport"></div>
+                        <div class="locationName">Pittsburgh International Airport</div>
+                        <div class="locationDetail">1000 Airport Blvd, Coraoplis, PA</div>
+                    </li>
+                    <li>
+                        <div class="chooseAddressBut button">choose</div>
+                        <div class="addressIcon ad_d"></div>
+                        <div class="locationName">2924 Juniper St</div>
+                        <div class="locationDetail">2924 Juniper St, Pittsburgh, PA</div>
+                    </li>
+                    <li>
+                        <div class="chooseAddressBut button">choose</div>
+                        <div class="addressIcon ad_d"></div>
+                        <div class="locationName">3456 goople St</div>
+                        <div class="locationDetail">2924 Juniper St, Pittsburgh, PA</div>
+                    </li>
+                    <li><div class="addressIcon ad_d"></div></li>
+                    <li><div class="addressIcon ad_d"></div></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!--===============
+        choose contactBook
+    =================-->
+
+    <div id="chooseDriversLay" class="initiallyHidden">
+        <div class="header">
+            <div class="title">Choose you driver</div>
+        </div>
+        <div class="content">
+            <div class="list">
+                <ul>
+                    <li>
+                        <div class="profile-big p3"></div>
+                        <div class="driverInfo">
+                            <div class="driverName_dc">Peter.H</div>
+                            <div class="chooseDriverBut button">Choose</div>
+                            <div class="rate_dc"><div class="r0_s r5"></div></div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="profile-big p1"></div>
+                        <div class="driverInfo">
+                            <div class="driverName_dc">Mark Rocks</div>
+                            <div class="chooseDriverBut button">Choose</div>
+                            <div class="rate_dc"><div class="r0_s r4"></div></div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="profile-big p4"></div>
+                        <div class="driverInfo">
+                            <div class="driverName_dc">Mike.C</div>
+                            <div class="chooseDriverBut button">Choose</div>
+                            <div class="rate_dc"><div class="r0_s r3"></div></div>
+                            <div class="moreInfo_rb">>></div>
+                        </div>
+                    </li>
+                    <li><div class="profile-big p6"></div></li>
+                    <li><div class="profile-big p8"></div></li>
+                    <li><div class="profile-big p5"></div></li>
+                    <li><div class="profile-big p7"></div></li>
+                    <li><div class="profile-big p2"></div></li>
+                    <li><div class="profile-big p9"></div></li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+
+</html>

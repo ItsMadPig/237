@@ -1,0 +1,8 @@
+Competitive Analysis:
+
+Tanks is based on an online game of the same name.
+There are several online versions - some are single player, some are multiplayer
+Some have a chat feature, some do not
+However, all the online versions were written in Flash or Java
+Our version is written in HTML5, so it can be made to run on devices
+of all screen sizes with very little effort.

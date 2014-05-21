@@ -1,0 +1,70 @@
+<!-- HTML for the tanks game -->
+<!-- Ideally, the game and the chatbox would be centered -->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>Tanks</title>
+	<link href="reset.css" rel="stylesheet" type="text/css">
+	<link href="style.css" rel="stylesheet" type="text/css">
+	<script src="jquery-1.9.0.js"></script>
+
+	<script type="text/javascript" src="Frame.js"></script>
+	<script type="text/javascript" src="Item.js"></script>
+	<script type="text/javascript" src="Level.js"></script>
+	<script type="text/javascript" src="PhysicsEngine.js"></script>
+	<script type="text/javascript" src="Player.js"></script>
+	<script type="text/javascript" src="Client.js"></script>
+	<script type="text/javascript" src="Main.js"></script>
+</head>
+
+<body>
+	<div id = "header">
+		<a href = "main.html"><img src = "logo.png" width=223 height=50></a>
+	</div>
+
+    <div id = "container">
+	
+		<div id = "game"> 
+			<canvas id="myCanvas" width="1200" height="500"
+		        style="border:1px solid #000000; margin:auto">
+			</canvas>
+
+			<div class = "gameover">
+				<a href = "game.html">Play again</a><br>
+				<a href = "main.html">Back to Menu</a>
+			</div>
+		</div>
+
+		<div id = "chat">
+
+			<div class="chat-history">
+		    </div>
+
+		     <div id="chat-box">
+		        <form name="myform" action="javascript:addChat()">
+		          <div class="row">
+		            <!--label>Message:</label-->  <input id="chat-input" name="chat" type="text" size = "18" placeholder="Your message here"/>
+		            <input id="submitButton" name="Submit"  type="submit" value="Send"/>
+		          </div>
+		        </form>
+			</div>
+	    
+	    </div>
+  	
+  	</div>
+
+	<div id = "footer">
+
+   <form name="myform" action="javascript:endGame()">
+		     
+		            <input id="submitButton" name="Submit"  type="submit" value="Back to menu"/>
+		          </div>
+		        </form>
+	</div>
+
+	<script src="chat.js"></script>
+</body>
+
+</html>

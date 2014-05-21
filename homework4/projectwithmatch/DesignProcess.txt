@@ -1,0 +1,46 @@
+/*
+ * Aaron Hsu (ahsu1)
+ * ahsu1@andrew.cmu.edu
+ */
+
+User Testing,
+
+user: Josh Gerbasi
+
+There should be an explosion, indication of death
+
+The instructions should be made clearer
+
+Different color for the menu (discarded)
+
+Waiting screen
+
+try to record movement  (incomplete)
+
+picking color for tank
+for differentiation	(discarded)  instead, use grey scale
+
+damage not obvious, so listed in instructions.
+
+charge meter above or below the tank
+
+previous shot details shown on screen    (discarded)
+
+at the end of the game show statistics.   (discarded)
+Timer of how long game lasted	(discarded)
+
+end game animation
+end game menu
+
+store previous chat messages. (discarded)
+
+Your turn is bigger than waiting for opponent (discarded)
+
+
+
+
+
+
+
+
+

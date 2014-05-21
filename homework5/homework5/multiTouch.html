@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link href="reset.css" rel="stylesheet" type="text/css">
+	    <script src="jquery-1.9.0.js"></script>
+	    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+	    <script>
+
+
+		var Ball = function(config){
+		    this.color = config.color || 'blue';
+		    this.radius = config.radius;
+
+		    this.x = config.x;
+		    this.y = config.y;
+
+		    this.maxX = config.maxX;
+		    this.maxY = config.maxY;
+
+		}
+
+		Ball.prototype.draw = function(scaledPage){
+		    scaledPage.fillCircle(this.x, this.y, this.radius, this.color);
+		}
+
+	    var TouchHandler = (function() {
+	    var exports = {};
+	    var touchBalls = {};
+	    var page;
+	    exports.init = function(app) {
+	        var radius = 30;
+	        var canvas = app.canvas[0];
+	        page = app.page;
+
+	        function onTouchStart(e) {
+	            var i, ballConfig, touch, ballLocation;
+	            e.preventDefault();
+	            for (i = 0; i < e.changedTouches.length; i++) {
+	                touch = e.changedTouches[i];
+	                ballLocation = page.pageToCanvas(touch.pageX, touch.pageY);
+	                ballConfig = {'x': ballLocation.x,
+	                              'y': ballLocation.y,
+	                              'radius': radius,
+	                              'maxX': app.width,
+	                              'maxY': app.height,
+	                              'color': 'red'};
+	                touchBalls[touch.identifier] = new Ball(ballConfig);
+	            }
+	        }
+
+	        function onTouchMove(e) {
+	            var i, touch, ballLocation;
+	            e.preventDefault();
+	            for (i = 0; i < e.changedTouches.length; i++) {
+	                touch = e.changedTouches[i];
+	                ballLocation = page.pageToCanvas(touch.pageX, touch.pageY);
+	                if (touchBalls[touch.identifier] !== undefined) {
+	                  touchBalls[touch.identifier].x = ballLocation.x;
+	                  touchBalls[touch.identifier].y = ballLocation.y;
+	                }
+	            }
+	        }
+
+	        function onTouchCancel(e) {
+	            // called when browser loses focus (eg, on iOS when it recognizes a gesture)
+	            touchBalls = [ ];
+	        }
+	        
+	        function onTouchEnd(e) {
+	            for (i = 0; i < e.changedTouches.length; i++) {
+	                touch = e.changedTouches[i];
+	                delete touchBalls[touch.identifier];
+	            }
+	        }
+
+	        canvas.addEventListener('touchstart', onTouchStart);
+	        canvas.addEventListener('touchmove', onTouchMove);
+	        canvas.addEventListener('touchend', onTouchEnd);
+	        canvas.addEventListener('touchcancel', onTouchCancel);
+	    }
+
+	    exports.drawBalls = function() {
+	      for (id in touchBalls) {
+	      	console.log(id);
+	        ball = touchBalls[id];
+	        ball.draw.bind(ball)(page)
+	      }
+	    };
+
+	    return exports;
+		})();
+
+
+
+
+		window.patchBind = function(){
+		    if (Function.prototype.bind === undefined){
+		       Function.prototype.bind = function (bind) {
+		            var self = this;
+		            return function () {
+		                var args = Array.prototype.slice.call(arguments);
+		                return self.apply(bind || null, args);
+		            };
+		        };
+		    }
+		}
+
+		window.patchRequestAnimationFrame = function(){
+		    window.requestAnimationFrame =
+		            window.requestAnimationFrame ||
+		            window.mozRequestAnimationFrame ||
+		            window.webkitRequestAnimationFrame ||
+		            window.msRequestAnimationFrame ||
+		            function(fn){
+		                setTimeout(function(){
+		                    fn(Date.now());
+		                }, 1000/60);
+		            };
+		}
+
+		window.isIOS = function(){
+		    return  !!(navigator.userAgent.match(/iPhone/i) ||
+		            navigator.userAgent.match(/iPod/i) ||
+		            navigator.userAgent.match(/iPad/i));
+		}
+
+		window.makeAspectRatioCanvas = function(parent, aspectRatio){
+		    var canvas = $("<canvas></canvas>");
+		    var calculateDims = function(aspectRatio, maxWidth, maxHeight){
+		        var width = Math.min(maxWidth, maxHeight*aspectRatio);
+		        var height = Math.min(maxHeight, maxWidth/aspectRatio);
+		        return { 'width': width, 'height': height };
+		    };
+		    parent.append(canvas);
+		    var dimensions = calculateDims(aspectRatio, parent.width(), parent.height());
+		    canvas.prop('width', dimensions.width);
+		    canvas.prop('height', dimensions.height);
+		    canvas.html("Your browser doesn't support canvas :(");
+		    return canvas;
+		};
+		window.deltaTimeRequestAnimationFrame = function(toBeCalled){
+		    var addTimeDiff = function(time){
+		        if (window.lastRequestAnimationFrame !== undefined){
+		            toBeCalled(time - window.lastRequestAnimationFrame);
+		        }
+		        window.lastRequestAnimationFrame = time;
+		        window.requestAnimationFrame(addTimeDiff);
+		    }
+		    window.requestAnimationFrame(addTimeDiff);
+		}
+
+
+
+
+		ScaledPage = function(canvas, virtualWidth){
+		    this.canvas = canvas;
+		    this.page = this.canvas[0].getContext('2d');
+		    this.scale = this.canvas.width() / virtualWidth;
+		}
+
+		ScaledPage.prototype.pageToCanvas = function(pageX, pageY) {
+		    var offset = this.canvas.offset();
+		    var x = (pageX - offset.left)  / this.scale;
+		    var y = (pageY - offset.top)   / this.scale;
+		    return { 'x': x,
+		             'y': y
+		           };
+		}
+
+		ScaledPage.prototype.canvasToPage = function(canvasX, canvasY) {
+		    return { 'x': canvasX * this.scale,
+		             'y': canvasY * this.scale
+		           };
+		}
+
+		ScaledPage.prototype.fillRect = function(x, y, width, height, color){
+		    this.page.fillStyle = color;
+		    this.page.fillRect(x * this.scale, y * this.scale, width * this.scale, height*this.scale);
+		}
+
+		ScaledPage.prototype.fillCircle = function(x, y, radius, color){
+		    this.page.fillStyle = color;
+		    this.page.beginPath();
+		    this.page.arc(x * this.scale, y * this.scale, radius * this.scale, 0, Math.PI*2, true);
+		    this.page.closePath();
+		    this.page.fill();
+		}
+
+
+
+
+		var multiTouchApp = function(){
+		    this.setup();
+		    window.deltaTimeRequestAnimationFrame(this.draw.bind(this));
+		}
+
+		//setting up canvas and functions
+		multiTouchApp.prototype.setup = function(){
+		    window.patchRequestAnimationFrame();
+		    window.patchBind();
+		    this.initCanvas();
+		    TouchHandler.init(this);
+		}
+
+		multiTouchApp.prototype.initCanvas = function(){
+		    this.body = $(document.body);
+		    this.body.width(document.body.offsetWidth);
+		    this.body.height(window.innerHeight - 20);
+		    this.width = 360;
+		    this.height = 490;
+		    this.canvas = window.makeAspectRatioCanvas(this.body, this.width/this.height);
+		    this.page = new ScaledPage(this.canvas, this.width);
+		};
+
+		//drawing
+		multiTouchApp.prototype.draw = function(timeDiff){
+		    this.clearPage();
+		    TouchHandler.drawBalls(timeDiff);
+		}
+
+		multiTouchApp.prototype.clearPage = function(){
+		    this.page.fillRect(0, 0, this.width, this.height, '#eee');
+		}
+
+
+
+</script>
+	<script>
+		window.onload = function(){
+			new multiTouchApp();
+		}
+	</script>
+	</head>
+
+
+	<body>
+	</body>
+</html>
+

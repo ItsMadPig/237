@@ -1,0 +1,68 @@
+/* Reset */
+
+html, body, div, h1, h2, h3, em, ul, li, section {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+
+ul {
+  list-style: none;
+}
+
+/* Styles */
+
+em {
+  font-style: italic;
+}
+
+body {
+  background: #01414f;
+  color: #444;
+  font: 16px/1.5 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  padding: 20px 0;
+}
+
+#content {
+  background: #fff;
+  margin: 0 auto;
+  padding: 40px;
+  max-width: 600px;
+}
+
+h1 {
+  font-size: 56px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+section {
+  margin-bottom: 20px;
+}
+
+section:last-child {
+  margin: 0;
+}
+
+h2 {
+  border-bottom: 3px solid #ccc;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.tiered > li {
+  margin-bottom: 20px;
+}
+
+.tiered h3 {
+  font-weight: bold;
+}
+
+.tiered .description {
+  list-style: square;
+  margin-left: 20px;
+}

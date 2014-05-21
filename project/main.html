@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title> Cabbiage</title>
+  	<link href="reset.css" rel="stylesheet" type="text/css">
+	<script src="jquery-1.9.0.js"></script>
+	<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+
+	<style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map-canvas { height: 100% }
+    </style>
+
+    <script type="text/javascript"
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAzs3-Vf6NroQ3y0fxvf_UY5piCWiVCWhw&sensor=true">
+    </script>
+
+    <script type="text/javascript">
+      function initialize() {
+        var mapOptions = {
+          center: new google.maps.LatLng(40.444513,-79.942342),
+          zoom: 17,
+          mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+        var map = new google.maps.Map(document.getElementById("map-canvas"),
+            mapOptions);
+      }
+      google.maps.event.addDomListener(window, 'load', initialize);
+    </script>
+</head>
+
+<body>
+    <div id="map-canvas"/>
+</body>
+</html>
+
+

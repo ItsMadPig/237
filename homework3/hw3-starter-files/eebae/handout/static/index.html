@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link href="reset.css" rel="stylesheet" type="text/css">
+    <link href="style.css" rel="stylesheet" type="text/css">
+  </head>
+  <body>
+
+
+    <div class="wrapper">
+      <div id="header">
+          <h1>Welcome to <span class="ebay"><span class="r">ee</span><span class="b">b</span><span class="y">a</span><span class="g">e</span></span></h1>
+      </div>
+
+      <div id="eebae-listing">
+        <p>Create a New Listing</p>
+        <form name="myform" action="javascript:addListing()">
+          <div class="row">
+            <label>Author:</label>  <input id="author-input" name="Author" type="text" placeholder="Harold"/> 
+          </div>
+          <div class="row">
+            <label>Description:</label>  <input id="desc-input" name="Desc" type="text" placeholder="A blue car..."/>
+          </div>
+          <div class="row">
+            <label>Price:</label>  <input id="price-input" name="Price" type="text" placeholder="3133.70"/>
+          </div>
+          <div class="row right">
+            <input id="submitButton" name="Submit"  type="submit" value="Add Listing"/>
+          </div>
+        </form>
+      </div>
+
+      <ul class="listings"></ul>
+
+    </div>
+
+
+	<script src="jquery-1.9.0.js"></script>
+	<script src="eebae.js"></script>
+	</body>
+</html>

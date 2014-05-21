@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="reset.css">
+    <link href="style.css" rel="stylesheet" type="text/css">
+  </head>
+  <body>
+    <div class="wrapper">
+      <h1>Wolfram<span>Beta</span></h1>
+
+      <form id="compute-form">
+        <label for="question">Ask a <strong>question</strong></label>
+        <input id="question" name="question" type="text" placeholder="How many tomatoes grow in the forest?" class="wolfbox" />
+      </form>
+
+      <div id="answer" class="wolfbox">
+        <h3>Input:</h3>
+        <p id="answerInput"></p>
+
+        <h3>Result:</h3>
+        <p id="answerOutput"></p>
+
+        <h3>Timestamp:</h3>
+        <p id="answerTimestamp"></p>
+
+      </div>
+   </div>
+	<script src="jquery-1.9.0.js"></script>
+  <script src="wolfram.js"></script>
+	</body>
+</html>
